@@ -13,7 +13,7 @@ window.FESTA = {
   idadePagante: 6,
 
   // Imagem do topo do site
-  imagemTopo: 'img/convite.webp',
+  imagemTopo: 'convite.webp',
 
   // Supabase
   supabaseUrl: 'https://vlwctynhxlcvfffwszrb.supabase.co',
