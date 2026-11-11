@@ -12,11 +12,10 @@ window.FESTA = {
   // A partir desta idade o convidado é PAGANTE (abaixo dela, não pagante)
   idadePagante: 6,
 
-  // Opcional: caminho de uma imagem sua (ex.: 'img/topo.png') para o topo do site
+  // Imagem do topo do site
   imagemTopo: 'img/convite.webp',
 
-  // Supabase → Project Settings → API (ou "API Keys")
-  // Deixe vazio para testar em MODO DEMONSTRAÇÃO (salva só no seu navegador)
-  supabaseUrl: '',   // ex.: 'https://abcdefgh.supabase.co'
-  supabaseKey: ''    // a chave "anon" / "publishable" (é pública, pode ficar aqui)
+  // Supabase
+  supabaseUrl: 'https://vlwctynhxlcvfffwszrb.supabase.co',
+  supabaseKey: 'sb_publishable__MOTTARUh9Os4Vtv5GWelg_r3zBbq9B'
 };
