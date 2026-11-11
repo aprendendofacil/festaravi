@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Confirme sua presença 🎉</title>
+  <meta name="description" content="Confirme a presença dos convidados na festa.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&display=swap">
+  <link rel="stylesheet" href="styles.css">
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</head>
+<body>
+  <div class="cenario" aria-hidden="true">
+    <div class="sol"></div>
+    <div class="nuvem n1"></div><div class="nuvem n2"></div><div class="nuvem n3"></div>
+    <div class="morro m1"></div><div class="morro m2"></div>
+  </div>
+
+  <main class="pagina">
+    <img class="topo-img" alt="Convite: Estou contando com você nos meus 4 aninhos! Me ajuda a preencher minha lista?" hidden>
+
+    <section class="cartao convite">
+      <span class="etiqueta">Você está convidado!</span>
+      <h1>Festa do <span data-festa="aniversariante">Ravi</span> <span class="idade-bola" data-festa="idade">4</span></h1>
+      <p class="sub">Vem brincar com a gente! Confirme abaixo quem da sua família vai.</p>
+      <div class="infos">
+        <div class="info">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+          <div><small>Quando</small><span data-festa="data"></span> · <span data-festa="horario"></span></div>
+        </div>
+        <div class="info">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+          <div><small>Onde</small><span data-festa="local"></span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cartao" id="area-form">
+      <h2>Quem vai?</h2>
+      <p class="dica"><span id="prazo">Confirme até <b data-festa="confirmarAte"></b>. </span>Coloque o nome e a idade de cada pessoa que vai.</p>
+      <p class="aviso-demo" hidden>Modo demonstração: o banco ainda não foi configurado no <code>config.js</code>. As respostas ficam só neste navegador.</p>
+
+      <form id="form" novalidate>
+        <div>
+          <label for="familia">Família ou responsável</label>
+          <input id="familia" name="familia" maxlength="80" autocomplete="family-name" placeholder="Ex.: Família Souza" required>
+        </div>
+
+        <div>
+          <label>Convidados</label>
+          <div class="convidados" id="convidados"></div>
+        </div>
+
+        <button type="button" class="btn secundario" id="adicionar">+ Adicionar convidado</button>
+
+        <p class="erro" id="erro" role="alert" hidden></p>
+        <button type="submit" class="btn grande" id="enviar">Confirmar presença</button>
+      </form>
+    </section>
+
+    <section class="cartao sucesso" id="area-ok" hidden>
+      <div class="patinhas" aria-hidden="true">
+        <svg width="34" height="34" viewBox="0 0 32 32" fill="currentColor"><ellipse cx="16" cy="21" rx="7" ry="6"/><ellipse cx="7" cy="13" rx="3" ry="4"/><ellipse cx="13" cy="8" rx="3" ry="4"/><ellipse cx="19" cy="8" rx="3" ry="4"/><ellipse cx="25" cy="13" rx="3" ry="4"/></svg>
+        <svg width="34" height="34" viewBox="0 0 32 32" fill="currentColor"><ellipse cx="16" cy="21" rx="7" ry="6"/><ellipse cx="7" cy="13" rx="3" ry="4"/><ellipse cx="13" cy="8" rx="3" ry="4"/><ellipse cx="19" cy="8" rx="3" ry="4"/><ellipse cx="25" cy="13" rx="3" ry="4"/></svg>
+        <svg width="34" height="34" viewBox="0 0 32 32" fill="currentColor"><ellipse cx="16" cy="21" rx="7" ry="6"/><ellipse cx="7" cy="13" rx="3" ry="4"/><ellipse cx="13" cy="8" rx="3" ry="4"/><ellipse cx="19" cy="8" rx="3" ry="4"/><ellipse cx="25" cy="13" rx="3" ry="4"/></svg>
+      </div>
+      <h2>Presença confirmada!</h2>
+      <p class="dica" style="margin:0">Obrigado! Já anotamos:</p>
+      <ul id="confirmados"></ul>
+      <p class="dica" style="margin:0">Até a festa!</p>
+      <button type="button" class="btn secundario" id="denovo">Confirmar outra família</button>
+    </section>
+
+    <p class="rodape">Feito com carinho para a festa do <span data-festa="aniversariante"></span></p>
+  </main>
+
+  <template id="tpl-convidado">
+    <div class="convidado">
+      <input class="c-nome" maxlength="80" placeholder="Nome" aria-label="Nome do convidado">
+      <input class="c-idade" type="number" inputmode="numeric" min="0" max="120" placeholder="Idade" aria-label="Idade">
+      <button type="button" class="btn-remover" aria-label="Remover convidado">×</button>
+    </div>
+  </template>
+
+  <script>
+    const lista = document.getElementById('convidados');
+    const tpl = document.getElementById('tpl-convidado');
+    const erro = document.getElementById('erro');
+    let seq = 0;
+
+    function adicionar(foco) {
+      const linha = tpl.content.firstElementChild.cloneNode(true);
+      seq++;
+      linha.querySelector('.c-nome').id = 'nome-' + seq;
+      linha.querySelector('.c-idade').id = 'idade-' + seq;
+      linha.querySelector('.btn-remover').addEventListener('click', () => {
+        if (lista.children.length > 1) linha.remove();
+        else { linha.querySelector('.c-nome').value = ''; linha.querySelector('.c-idade').value = ''; }
+      });
+      lista.appendChild(linha);
+      if (foco) linha.querySelector('.c-nome').focus();
+    }
+
+    function mostrarErro(msg) { erro.textContent = msg; erro.hidden = !msg; }
+
+    document.getElementById('adicionar').addEventListener('click', () => adicionar(true));
+
+    document.getElementById('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      mostrarErro('');
+      const familia = document.getElementById('familia').value.trim();
+      const convidados = [];
+      for (const linha of lista.children) {
+        const nome = linha.querySelector('.c-nome').value.trim();
+        const idadeTxt = linha.querySelector('.c-idade').value.trim();
+        if (!nome && !idadeTxt) continue;
+        const idade = Number(idadeTxt);
+        if (!nome) return mostrarErro('Falta o nome de um convidado.');
+        if (idadeTxt === '' || !Number.isInteger(idade) || idade < 0 || idade > 120)
+          return mostrarErro('Informe a idade de ' + nome + ' (só números, ex.: 4 ou 35).');
+        convidados.push({ nome, idade });
+      }
+      if (!familia) { document.getElementById('familia').focus(); return mostrarErro('Escreva o nome da família ou do responsável.'); }
+      if (!convidados.length) return mostrarErro('Adicione pelo menos um convidado.');
+
+      const btn = document.getElementById('enviar');
+      btn.disabled = true; btn.textContent = 'Enviando…';
+      try {
+        await DB.confirmar(familia, convidados);
+        const ul = document.getElementById('confirmados');
+        ul.replaceChildren(...convidados.map(c => {
+          const li = document.createElement('li');
+          li.textContent = c.nome + ' · ' + c.idade + (c.idade === 1 ? ' ano' : ' anos');
+          return li;
+        }));
+        document.getElementById('area-form').hidden = true;
+        document.getElementById('area-ok').hidden = false;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (err) {
+        mostrarErro('Não conseguimos enviar agora. Verifique a internet e tente de novo.');
+        console.error(err);
+      } finally {
+        btn.disabled = false; btn.textContent = 'Confirmar presença';
+      }
+    });
+
+    document.getElementById('denovo').addEventListener('click', () => {
+      document.getElementById('form').reset();
+      lista.replaceChildren(); adicionar(); adicionar();
+      document.getElementById('area-ok').hidden = true;
+      document.getElementById('area-form').hidden = false;
+      document.getElementById('familia').focus();
+    });
+
+    if (!FESTA.confirmarAte) document.getElementById('prazo').hidden = true;
+    adicionar(); adicionar();
+  </script>
+</body>
+</html>

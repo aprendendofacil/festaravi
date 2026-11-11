@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>Painel da festa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&display=swap">
+  <link rel="stylesheet" href="styles.css">
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</head>
+<body>
+  <div class="cenario" aria-hidden="true">
+    <div class="sol"></div>
+    <div class="nuvem n1"></div><div class="nuvem n2"></div>
+    <div class="morro m1"></div><div class="morro m2"></div>
+  </div>
+
+  <main class="pagina larga">
+    <!-- Login -->
+    <section class="cartao login" id="area-login" hidden>
+      <h2>Painel da festa</h2>
+      <p class="dica">Só para os pais. Entre com o email e a senha criados no Supabase.</p>
+      <p class="aviso-demo" hidden>Modo demonstração: qualquer email e senha entram.</p>
+      <form id="form-login">
+        <div><label for="email">Email</label><input id="email" type="email" autocomplete="username" required></div>
+        <div><label for="senha">Senha</label><input id="senha" type="password" autocomplete="current-password" required></div>
+        <p class="erro" id="erro-login" role="alert" hidden></p>
+        <button class="btn azul grande" id="entrar">Entrar</button>
+      </form>
+    </section>
+
+    <!-- Painel -->
+    <div id="area-painel" hidden style="display:flex;flex-direction:column;gap:24px">
+      <div class="painel-topo">
+        <div>
+          <span class="etiqueta">Lista de presença</span>
+          <h1>Festa do <span data-festa="aniversariante"></span></h1>
+        </div>
+        <div class="acoes">
+          <button class="btn secundario" id="atualizar">Atualizar</button>
+          <button class="btn secundario" id="copiar">Copiar lista</button>
+          <button class="btn secundario" id="sair">Sair</button>
+        </div>
+      </div>
+      <p class="aviso-demo" hidden>Modo demonstração: mostrando só o que foi confirmado neste navegador.</p>
+      <p class="erro" id="erro-painel" role="alert" hidden></p>
+
+      <div class="totais">
+        <div class="total"><b id="t-total">0</b><span>convidados confirmados</span></div>
+        <div class="total gratis"><b id="t-gratis">0</b><span>não pagantes</span></div>
+        <div class="total paga"><b id="t-paga">0</b><span>pagantes</span></div>
+      </div>
+
+      <div class="lados">
+        <section class="cartao lado gratis">
+          <div class="lado-cabeca">
+            <div><h2>Não pagantes</h2><p>Crianças até <span data-idade-limite>5</span> anos</p></div>
+            <span class="contador" id="c-gratis">0</span>
+          </div>
+          <ul class="lista" id="l-gratis"></ul>
+        </section>
+        <section class="cartao lado paga">
+          <div class="lado-cabeca">
+            <div><h2>Pagantes</h2><p>Crianças de <span data-idade-pagante>6</span> anos ou mais e adultos</p></div>
+            <span class="contador" id="c-paga">0</span>
+          </div>
+          <ul class="lista" id="l-paga"></ul>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let dados = [];
+
+    function mostrar(logado) { $('area-login').hidden = logado; $('area-painel').hidden = !logado; }
+
+    function itemLista(c) {
+      const li = document.createElement('li');
+      const idade = document.createElement('span'); idade.className = 'idade'; idade.textContent = c.idade;
+      const txt = document.createElement('span'); txt.className = 'nome'; txt.textContent = c.nome;
+      const fam = document.createElement('span'); fam.className = 'familia'; fam.textContent = c.familia; txt.appendChild(fam);
+      const del = document.createElement('button'); del.className = 'apagar'; del.textContent = 'Remover';
+      del.setAttribute('aria-label', 'Remover ' + c.nome);
+      let timer;
+      del.addEventListener('click', async () => {
+        if (!del.classList.contains('confirmar')) {
+          del.classList.add('confirmar'); del.textContent = 'Tem certeza?';
+          timer = setTimeout(() => { del.classList.remove('confirmar'); del.textContent = 'Remover'; }, 3000);
+          return;
+        }
+        clearTimeout(timer); del.disabled = true; del.textContent = '…';
+        try { await DB.apagar(c.id); await carregar(); }
+        catch (e) { erroPainel(e); del.disabled = false; del.textContent = 'Remover'; del.classList.remove('confirmar'); }
+      });
+      li.append(idade, txt, del);
+      return li;
+    }
+
+    function vazio(msg) { const li = document.createElement('li'); li.className = 'vazio'; li.textContent = msg; return li; }
+
+    function render() {
+      const gratis = dados.filter(c => !DB.pagante(c.idade));
+      const paga = dados.filter(c => DB.pagante(c.idade));
+      $('t-total').textContent = dados.length;
+      $('t-gratis').textContent = $('c-gratis').textContent = gratis.length;
+      $('t-paga').textContent = $('c-paga').textContent = paga.length;
+      $('l-gratis').replaceChildren(...(gratis.length ? gratis.map(itemLista) : [vazio('Ninguém nesta lista ainda.')]));
+      $('l-paga').replaceChildren(...(paga.length ? paga.map(itemLista) : [vazio('Ninguém nesta lista ainda.')]));
+    }
+
+    function erroPainel(e) {
+      if (e && e.status === 401) { DB.sair(); mostrar(false); $('erro-login').textContent = e.message || 'Entre de novo.'; $('erro-login').hidden = false; return; }
+      $('erro-painel').textContent = 'Não foi possível carregar a lista: ' + (e && e.message || 'erro desconhecido');
+      $('erro-painel').hidden = false;
+    }
+
+    async function carregar() {
+      $('erro-painel').hidden = true;
+      try {
+        dados = (await DB.listar()).slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+        render();
+      } catch (e) { erroPainel(e); }
+    }
+
+    $('form-login').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      $('erro-login').hidden = true;
+      $('entrar').disabled = true; $('entrar').textContent = 'Entrando…';
+      try { await DB.entrar($('email').value.trim(), $('senha').value); mostrar(true); await carregar(); }
+      catch (err) { $('erro-login').textContent = 'Email ou senha incorretos.'; $('erro-login').hidden = false; }
+      finally { $('entrar').disabled = false; $('entrar').textContent = 'Entrar'; }
+    });
+
+    $('sair').addEventListener('click', () => { DB.sair(); dados = []; mostrar(false); });
+    $('atualizar').addEventListener('click', carregar);
+
+    $('copiar').addEventListener('click', async () => {
+      const linha = (c) => `- ${c.nome} (${c.idade}) · ${c.familia}`;
+      const g = dados.filter(c => !DB.pagante(c.idade)), p = dados.filter(c => DB.pagante(c.idade));
+      const texto = `Festa do ${FESTA.aniversariante} · ${dados.length} confirmados\n\n` +
+        `NÃO PAGANTES (${g.length})\n${g.map(linha).join('\n')}\n\nPAGANTES (${p.length})\n${p.map(linha).join('\n')}`;
+      try { await navigator.clipboard.writeText(texto); $('copiar').textContent = 'Copiado!'; }
+      catch (e) { $('copiar').textContent = 'Não deu para copiar'; }
+      setTimeout(() => { $('copiar').textContent = 'Copiar lista'; }, 2000);
+    });
+
+    if (DB.sessao()) { mostrar(true); carregar(); } else { mostrar(false); }
+  </script>
+</body>
+</html>
