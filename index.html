@@ -11,6 +11,17 @@
   <link rel="stylesheet" href="styles.css">
   <script src="config.js"></script>
   <script src="app.js"></script>
+  <style>
+    /* Tela de obrigado */
+    .sucesso { padding-block: 32px; }
+    .obrigado-titulo { font-size: clamp(36px, 10vw, 56px); color: var(--azul); -webkit-text-stroke: 1.5px var(--azul-escuro); paint-order: stroke fill; margin: 4px 0 0; outline: none; overflow-wrap: anywhere; }
+    .obrigado-texto { margin: 0; font-size: 18px; font-weight: 700; color: var(--suave); max-width: 32ch; text-wrap: balance; }
+    .lembrete { width: 100%; background: #fff; border: 2.5px dashed var(--azul-escuro); border-radius: 20px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; text-align: left; }
+    .lembrete-titulo { margin: 0; font-family: var(--fonte-titulo); font-weight: 800; font-size: 20px; color: var(--laranja-escuro); }
+    .lembrete-linha { display: flex; gap: 10px; align-items: flex-start; font-weight: 800; min-width: 0; }
+    .lembrete-linha svg { flex: none; margin-top: 2px; }
+    #confete { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+  </style>
 </head>
 <body>
   <div class="cenario" aria-hidden="true">
@@ -67,12 +78,27 @@
         <svg width="34" height="34" viewBox="0 0 32 32" fill="currentColor"><ellipse cx="16" cy="21" rx="7" ry="6"/><ellipse cx="7" cy="13" rx="3" ry="4"/><ellipse cx="13" cy="8" rx="3" ry="4"/><ellipse cx="19" cy="8" rx="3" ry="4"/><ellipse cx="25" cy="13" rx="3" ry="4"/></svg>
         <svg width="34" height="34" viewBox="0 0 32 32" fill="currentColor"><ellipse cx="16" cy="21" rx="7" ry="6"/><ellipse cx="7" cy="13" rx="3" ry="4"/><ellipse cx="13" cy="8" rx="3" ry="4"/><ellipse cx="19" cy="8" rx="3" ry="4"/><ellipse cx="25" cy="13" rx="3" ry="4"/></svg>
       </div>
-      <h2>Presença confirmada!</h2>
-      <p class="dica" style="margin:0">Obrigado! Já anotamos:</p>
+      <span class="etiqueta">Presença confirmada</span>
+      <h1 class="obrigado-titulo" tabindex="-1" id="ok-titulo">Obrigado, <span id="ok-familia"></span>!</h1>
+      <p class="obrigado-texto">O <span data-festa="aniversariante"></span> vai adorar ver vocês na festa. Já anotamos:</p>
       <ul id="confirmados"></ul>
-      <p class="dica" style="margin:0">Até a festa!</p>
+
+      <div class="lembrete">
+        <p class="lembrete-titulo">Guarde a data</p>
+        <div class="lembrete-linha">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+          <span><span data-festa="data"></span> · <span data-festa="horario"></span></span>
+        </div>
+        <div class="lembrete-linha">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+          <span data-festa="local"></span>
+        </div>
+      </div>
+
+      <p class="obrigado-texto">Até lá!</p>
       <button type="button" class="btn secundario" id="denovo">Confirmar outra família</button>
     </section>
+    <canvas id="confete" aria-hidden="true"></canvas>
 
     <p class="rodape">Feito com carinho para a festa do <span data-festa="aniversariante"></span></p>
   </main>
@@ -136,9 +162,13 @@
           li.textContent = c.nome + ' · ' + c.idade + (c.idade === 1 ? ' ano' : ' anos');
           return li;
         }));
+        document.getElementById('ok-familia').textContent = familia;
+        document.querySelector('.convite').hidden = true;
         document.getElementById('area-form').hidden = true;
         document.getElementById('area-ok').hidden = false;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0 });
+        document.getElementById('ok-titulo').focus({ preventScroll: true });
+        confete();
       } catch (err) {
         mostrarErro('Não conseguimos enviar agora. Verifique a internet e tente de novo.');
         console.error(err);
@@ -151,9 +181,41 @@
       document.getElementById('form').reset();
       lista.replaceChildren(); adicionar(); adicionar();
       document.getElementById('area-ok').hidden = true;
+      document.querySelector('.convite').hidden = false;
       document.getElementById('area-form').hidden = false;
-      document.getElementById('familia').focus();
+      document.getElementById('area-form').scrollIntoView();
+      document.getElementById('familia').focus({ preventScroll: true });
     });
+
+    // Chuva de confete rápida na tela de obrigado
+    function confete() {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const cv = document.getElementById('confete'), ctx = cv.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; ctx.scale(dpr, dpr);
+      const cores = ['#3D7BC4', '#F4A259', '#9AD8F5', '#8CC84B', '#FFD95A', '#ffffff'];
+      const pecas = Array.from({ length: 140 }, () => ({
+        x: Math.random() * innerWidth, y: -20 - Math.random() * innerHeight * 0.6,
+        w: 6 + Math.random() * 6, h: 10 + Math.random() * 8, cor: cores[Math.floor(Math.random() * cores.length)],
+        vy: 2 + Math.random() * 3, vx: -1 + Math.random() * 2, rot: Math.random() * 6, vr: -0.2 + Math.random() * 0.4
+      }));
+      const inicio = performance.now();
+      (function quadro(t) {
+        ctx.clearRect(0, 0, innerWidth, innerHeight);
+        const fim = t - inicio > 3200;
+        let vivos = 0;
+        for (const p of pecas) {
+          p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+          if (p.y > innerHeight + 20) { if (fim) continue; p.y = -20; }
+          vivos++;
+          ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+          ctx.fillStyle = p.cor; ctx.strokeStyle = '#1F3F6E'; ctx.lineWidth = 1.5;
+          ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.strokeRect(-p.w / 2, -p.h / 2, p.w, p.h);
+          ctx.restore();
+        }
+        if (vivos) requestAnimationFrame(quadro); else ctx.clearRect(0, 0, innerWidth, innerHeight);
+      })(inicio);
+    }
 
     if (!FESTA.confirmarAte) document.getElementById('prazo').hidden = true;
     adicionar(); adicionar();
